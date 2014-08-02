@@ -24,23 +24,22 @@ static abc: &'static[char] = &['a', 'b', 'c'];
 static de: &'static[char] = &['d', 'e'];
 
 fn str_abc(inp: &[char]) -> StringMatch {
-    let matched = if inp.starts_with(abc) {
-        (abc, inp.slice_from(abc.len()))
+    if inp.starts_with(abc) {
+        let matched = (abc, inp.slice_from(abc.len()));
+        StringMatch { smatch: Some(matched) }
     } else {
-        (&[], inp)
-    };
+        StringMatch { smatch: None }
+    }
 
-    StringMatch { smatch: Some(matched) }
 }
 
 fn str_de(inp: &[char]) -> StringMatch {
-    let matched = if inp.starts_with(de) {
-        (de, inp.slice_from(de.len()))
+    if inp.starts_with(de) {
+        let matched = (de, inp.slice_from(de.len()));
+        StringMatch { smatch: Some(matched) }
     } else {
-        (&[], inp)
-    };
-
-    StringMatch { smatch: Some(matched) }
+        StringMatch { smatch: None }
+    }
 }
 
 // assuming theres some way to get the iterator types of str_abc
@@ -103,20 +102,19 @@ Iterator<Match<'a>> for Concatter<'a, I, J> {
 
         // we need an op for when the second iterator is exhausted.
         // it advances the first iterator
-        match self.curr {
-            None => return None,
-            Some(_) => {
-                loop {
-                    match self.second_iter.unwrap().next() {
-                        None => {
-                            // second_iter is exhausted, so (try to) get another
-                            self.curr = self.first_iter.next();
-                            if !self.get_second_iter() { return None; }
-                        },
-                        Some((_, rem)) => {
-                            let n = self.orig_input.len() - rem.len();
-                            return Some(split_at(self.orig_input, n));
-                        }
+        if self.curr.is_none() {
+            return None;
+        } else {
+            loop {
+                match self.second_iter.get_mut_ref().next() {
+                    None => {
+                        // second_iter is exhausted, so (try to) get another
+                        self.curr = self.first_iter.next();
+                        if !self.get_second_iter() { return None; }
+                    },
+                    Some((_, rem)) => {
+                        let n = self.orig_input.len() - rem.len();
+                        return Some(split_at(self.orig_input, n));
                     }
                 }
             }
@@ -132,11 +130,21 @@ fn main() {
         println!("{}", m);
     }
 
+    println!("-------");
+
     for m in str_de(inp) {
         println!("{}", m);
     }
 
+    println!("-------");
+
     for m in alt_abc_de(inp) {
+        println!("{}", m);
+    }
+
+    println!("-------");
+
+    for m in cat_abc_de(inp) {
         println!("{}", m);
     }
 }
