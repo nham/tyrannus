@@ -28,6 +28,18 @@ struct Concatter<'a, I, J> {
 }
 
 impl<'a, I: Iterator<Match<'a>>, J: Iterator<Match<'a>>> Concatter<'a, I, J> {
+    fn new(inp: &'a [char], parser1: Parser<'a, I>, parser2: Parser<'a, J>)
+        -> Concatter<'a, I, J> {
+        let mut it = parser1(inp);
+        let start = it.next();
+
+        Concatter { orig_input: inp,
+                    first_iter: it,
+                    parser: parser2,
+                    curr: start,
+                    second_iter: None }
+    }
+
     // looks at current match (self.curr) from first parser and parses its 
     // remaining input, assigning the resulting stream of matches to second_iter
     fn get_second_iter(&mut self) -> bool {
@@ -105,14 +117,7 @@ fn alt_abc_de(inp: &[char]) -> Chain<StringMatch, StringMatch> {
 }
 
 fn cat_abc_de(inp: &[char]) -> Concatter<StringMatch, StringMatch> {
-    let mut it = str_abc(inp);
-    let start = it.next();
-
-    Concatter { orig_input: inp,
-                first_iter: it,
-                parser: str_de,
-                curr: start,
-                second_iter: None }
+    Concatter::new(inp, str_abc, str_de)
 }
 
 fn main() {
