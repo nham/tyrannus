@@ -19,6 +19,62 @@ impl<'a> Iterator<Match<'a>> for StringMatch<'a> {
     }
 }
 
+struct Concatter<'a, I, J> {
+    orig_input: &'a [char],
+    first_iter: I,
+    parser: Parser<'a, J>,
+    curr: Option<Match<'a>>, // None signals the iterator is exhausted
+    second_iter: Option<J>,
+}
+
+impl<'a, I: Iterator<Match<'a>>, J: Iterator<Match<'a>>> Concatter<'a, I, J> {
+    // looks at current match (self.curr) from first parser and parses its 
+    // remaining input, assigning the resulting stream of matches to second_iter
+    fn get_second_iter(&mut self) -> bool {
+        match self.curr {
+            None => false,
+            Some((_, rem)) => {
+                self.second_iter = Some( (self.parser)(rem) );
+                true
+            }
+        }
+    }
+}
+
+fn split_at<T>(sl: &[T], mid: uint) -> (&[T], &[T]) {
+    (sl.slice_to(mid), sl.slice_from(mid))
+}
+
+impl<'a, I: Iterator<Match<'a>>, J: Iterator<Match<'a>>>
+Iterator<Match<'a>> for Concatter<'a, I, J> {
+    fn next(&mut self) -> Option<Match<'a>> {
+        // should only happen at the beginning
+        if self.second_iter.is_none() {
+            if !self.get_second_iter() { return None; }
+        }
+
+        // we need an op for when the second iterator is exhausted.
+        // it advances the first iterator
+        if self.curr.is_none() {
+            return None;
+        } else {
+            loop {
+                match self.second_iter.get_mut_ref().next() {
+                    None => {
+                        // second_iter is exhausted, so (try to) get another
+                        self.curr = self.first_iter.next();
+                        if !self.get_second_iter() { return None; }
+                    },
+                    Some((_, rem)) => {
+                        let n = self.orig_input.len() - rem.len();
+                        return Some(split_at(self.orig_input, n));
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 static abc: &'static[char] = &['a', 'b', 'c'];
 static de: &'static[char] = &['d', 'e'];
@@ -57,69 +113,6 @@ fn cat_abc_de(inp: &[char]) -> Concatter<StringMatch, StringMatch> {
                 parser: str_de,
                 curr: start,
                 second_iter: None }
-}
-
-struct Concatter<'a, I, J> {
-    orig_input: &'a [char],
-    first_iter: I,
-    parser: Parser<'a, J>,
-    curr: Option<Match<'a>>, // None signals the iterator is exhausted
-    second_iter: Option<J>,
-}
-
-/*
-macro_rules! try_opt(
-    ($e:expr) => (match $e { Some(x) => x, None => return None })
-)
-*/
-
-
-fn split_at<T>(sl: &[T], mid: uint) -> (&[T], &[T]) {
-    (sl.slice_to(mid), sl.slice_from(mid))
-}
-
-impl<'a, I: Iterator<Match<'a>>, J: Iterator<Match<'a>>> Concatter<'a, I, J> {
-    // looks at current match (self.curr) from first parser and parses its 
-    // remaining input, assigning the resulting stream of matches to second_iter
-    fn get_second_iter(&mut self) -> bool {
-        match self.curr {
-            None => false,
-            Some((_, rem)) => {
-                self.second_iter = Some( (self.parser)(rem) );
-                true
-            }
-        }
-    }
-}
-
-impl<'a, I: Iterator<Match<'a>>, J: Iterator<Match<'a>>>
-Iterator<Match<'a>> for Concatter<'a, I, J> {
-    fn next(&mut self) -> Option<Match<'a>> {
-        // should only happen at the beginning
-        if self.second_iter.is_none() {
-            if !self.get_second_iter() { return None; }
-        }
-
-        // we need an op for when the second iterator is exhausted.
-        // it advances the first iterator
-        if self.curr.is_none() {
-            return None;
-        } else {
-            loop {
-                match self.second_iter.get_mut_ref().next() {
-                    None => {
-                        // second_iter is exhausted, so (try to) get another
-                        self.curr = self.first_iter.next();
-                        if !self.get_second_iter() { return None; }
-                    },
-                    Some((_, rem)) => {
-                        let n = self.orig_input.len() - rem.len();
-                        return Some(split_at(self.orig_input, n));
-                    }
-                }
-            }
-        }
-    }
 }
 
 fn main() {
