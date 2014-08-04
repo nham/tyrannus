@@ -7,19 +7,20 @@ extern crate syntax;
 use syntax::ast::{mod, Item, Ident};
 use syntax::codemap;
 use syntax::ext::base::{ExtCtxt, MacResult, DummyResult};
+use syntax::ext::quote::rt::{ToTokens, ExtParseUtils};
 use syntax::parse::token;
 use syntax::parse::parser::Parser;
 use syntax::print::pprust;
 
 use rustc::plugin::Registry;
 
-use common::StringMatch;
+pub use common::StringMatch;
 
 mod common {
-    type Match<'a> = (&'a [char], &'a [char]);
+    pub type Match<'a> = (&'a [char], &'a [char]);
 
     pub struct StringMatch<'a> {
-        smatch: Option<Match<'a>>,
+        pub smatch: Option<Match<'a>>,
     }
 
     impl<'a> Iterator<Match<'a>> for StringMatch<'a> {
@@ -67,17 +68,47 @@ fn expand_parse_string(cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTre
         Some(s) => s,
         None => return DummyResult::any(sp), // TODO: why any?
     };
-    let y = x.as_slice();
+    let v: Vec<char> = x.as_slice().chars().collect();
+    let y = v.as_slice();
+    let z = CharVecWrap { vec: v.as_slice() };
+    let n = y.len();
 
     let mut v = vec!();
-    v.push( quote_item!(&mut *cx, static $str_name: &'static str = $y;).unwrap() );
+    v.push( quote_item!(&mut *cx, static $str_name: &'static [char] = $z;).unwrap() );
     v.push( quote_item!(&mut *cx,
-        fn $name(n: uint) -> (&'static str, &'static str) {
-            ($str_name.slice_to(n), $str_name.slice_from(n))
+        fn $name(inp: &[char]) -> StringMatch {
+            if inp.starts_with($str_name) {
+                let matched = ($str_name, inp.slice_from($n));
+                StringMatch { smatch: Some(matched) }
+            } else {
+                StringMatch { smatch: None }
+            }
         }
     ).unwrap() );
 
+
     box MacItems { items: v } as Box<MacResult>
+}
+
+struct CharVecWrap<'a> {
+    vec: &'a [char]
+}
+
+impl<'a> ToTokens for CharVecWrap<'a> {
+    fn to_tokens(&self, cx: &ExtCtxt) -> Vec<ast::TokenTree> {
+        let mut s = "&".to_string();
+        s.push_char('[');
+        for (i, c) in self.vec.iter().enumerate() {
+            if i != 0 {
+                s.push_char(',');
+            }
+            s.push_char('\'');
+            s.push_char(*c);
+            s.push_char('\'');
+        }
+        s.push_char(']');
+        cx.parse_tts(s)
+    }
 }
 
 
