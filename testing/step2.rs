@@ -6,7 +6,7 @@ extern crate syntax;
 
 use syntax::ast::{mod, Item, MutImmutable, Inherited, Ident};
 use syntax::codemap;
-use syntax::ext::base::{ExtCtxt, MacResult, MacExpr};
+use syntax::ext::base::{ExtCtxt, MacResult};
 use syntax::parse::token::intern;
 
 use rustc::plugin::Registry;
@@ -34,7 +34,7 @@ impl MacResult for MacItems {
 fn expand(mut cx: &mut ExtCtxt, sp: codemap::Span, _: &[ast::TokenTree]) -> Box<MacResult> {
     let mut v = vec!();
 
-    v.push( quote_item!(cx, static foo_str: &'static str = "abc";).unwrap() );
+    v.push( quote_item!(&mut cx, static foo_str: &'static str = "abc";).unwrap() );
     v.push( quote_item!(&mut cx,
         fn foo(n: uint) -> (&'static str, &'static str) {
             (foo_str.slice_to(n), foo_str.slice_from(n))
