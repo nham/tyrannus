@@ -33,7 +33,7 @@ impl MacResult for MacItems {
     }
 }
 
-fn expand(mut cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> Box<MacResult> {
+fn expand(cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> Box<MacResult> {
     let mut parser = cx.new_parser_from_tts(tts);
 
     let name = parser.parse_ident();
@@ -48,12 +48,12 @@ fn expand(mut cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> Bo
 
     let mut v = vec!();
 
-    v.push( quote_item!(&mut cx,
-        fn foo(n: uint) -> (&'static str, &'static str) {
-            (foo_str.slice_to(n), foo_str.slice_from(n))
+    v.push( quote_item!(&mut *cx,
+        fn $name(n: uint) -> (&'static str, &'static str) {
+            ($str_name.slice_to(n), $str_name.slice_from(n))
         }
     ).unwrap() );
-    v.push( quote_item!(cx, static $str_name: &'static str = $y;).unwrap() );
+    v.push( quote_item!(&mut *cx, static $str_name: &'static str = $y;).unwrap() );
 
     box MacItems { items: v } as Box<MacResult>
 }
