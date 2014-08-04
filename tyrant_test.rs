@@ -9,13 +9,21 @@
 #[phase(plugin, link)] extern crate tyrant;
 
 use tyrant::StringMatch;
+use std::iter::Chain;
 
-parse_string!(foo "house")
+parse_string!(house "house")
+parse_string!(cat "cat")
+alt!(house cat)
  
 fn main() {
     let x: Vec<char> = "housecat".chars().collect();
+    let y: Vec<char> = "catdog".chars().collect();
     
-    for res in foo(x.as_slice()) {
+    for res in alt_house_cat(x.as_slice()) {
+        println!("{}", res);
+    }
+
+    for res in alt_house_cat(y.as_slice()) {
         println!("{}", res);
     }
 }

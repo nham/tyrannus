@@ -6,7 +6,7 @@ extern crate syntax;
 
 use syntax::ast::{mod, Item, Ident};
 use syntax::codemap;
-use syntax::ext::base::{ExtCtxt, MacResult, DummyResult};
+use syntax::ext::base::{ExtCtxt, MacResult, MacItem, DummyResult};
 use syntax::ext::quote::rt::{ToTokens, ExtParseUtils};
 use syntax::parse::token;
 use syntax::parse::parser::Parser;
@@ -55,6 +55,7 @@ impl MacResult for MacItems {
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
     reg.register_macro("parse_string", expand_parse_string);
+    reg.register_macro("alt", expand_alt);
 }
 
 fn expand_parse_string(cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> Box<MacResult> {
@@ -140,4 +141,21 @@ fn parse_string(cx: &mut ExtCtxt, parser: &mut Parser) -> Option<String> {
         return None;
     }
     Some(s)
+}
+
+
+fn expand_alt(cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> Box<MacResult> {
+    let mut parser = cx.new_parser_from_tts(tts);
+
+    let one = parser.parse_ident();
+    let two = parser.parse_ident();
+
+    let alt_ident_str = "alt_".to_string() + one.as_str() + "_" + two.as_str();
+    let alt_ident = Ident::new(token::intern(alt_ident_str.as_slice()));
+
+    MacItem::new(quote_item!(cx, 
+        fn $alt_ident(inp: &[char]) -> Chain<StringMatch, StringMatch> {
+            $one(inp).chain($two(inp))
+        }
+    ).unwrap())
 }
