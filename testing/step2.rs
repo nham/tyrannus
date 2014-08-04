@@ -31,14 +31,17 @@ impl MacResult for MacItems {
     }
 }
 
-fn expand(cx: &mut ExtCtxt, sp: codemap::Span, _: &[ast::TokenTree]) -> Box<MacResult> {
+fn expand(mut cx: &mut ExtCtxt, sp: codemap::Span, _: &[ast::TokenTree]) -> Box<MacResult> {
     let mut v = vec!();
-    v.push( quote_item!(cx, 
+    v.push( quote_item!(&mut cx,
         fn foo(n: uint) -> (&'static str, &'static str) {
             (foo_str.slice_to(n), foo_str.slice_from(n))
         }
     ).unwrap() );
 
+    v.push( quote_item!(cx, static foo_str: &'static str = "abc";).unwrap() );
+
+    /*
     let item = box(GC) ast::Item {
         ident: Ident::new(intern("foo_str")),
         attrs: ,
@@ -47,8 +50,7 @@ fn expand(cx: &mut ExtCtxt, sp: codemap::Span, _: &[ast::TokenTree]) -> Box<MacR
         vis: Inherited,
         span: sp,
     };
-
-    //v.push( quote_item!(cx, static foo_str: &'static str = "abc";).unwrap() );
+    */
 
     box MacItems { items: v } as Box<MacResult>
 }

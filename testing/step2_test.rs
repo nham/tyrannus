@@ -1,5 +1,5 @@
 #![feature(phase)]
-#[phase(plugin)] extern crate step1;
+#[phase(plugin)] extern crate step2;
 
 parse_str!()
 
