@@ -11,9 +11,11 @@
 use tyrant::StringMatch;
 use std::iter::Chain;
 
+parse_string!(e "")
 parse_string!(house "house")
 parse_string!(cat "cat")
 alt!(house cat)
+opt!(house)
  
 fn main() {
     let x: Vec<char> = "housecat".chars().collect();
@@ -23,7 +25,27 @@ fn main() {
         println!("{}", res);
     }
 
+    println!("--------");
+
     for res in alt_house_cat(y.as_slice()) {
+        println!("{}", res);
+    }
+
+    println!("--------");
+
+    for res in e(x.as_slice()) {
+        println!("{}", res);
+    }
+
+    println!("--------");
+
+    for res in e(y.as_slice()) {
+        println!("{}", res);
+    }
+
+    println!("--------");
+
+    for res in opt_house(x.as_slice()) {
         println!("{}", res);
     }
 }

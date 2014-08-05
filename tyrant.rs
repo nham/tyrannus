@@ -56,6 +56,7 @@ impl MacResult for MacItems {
 pub fn plugin_registrar(reg: &mut Registry) {
     reg.register_macro("parse_string", expand_parse_string);
     reg.register_macro("alt", expand_alt);
+    reg.register_macro("opt", expand_opt);
 }
 
 fn expand_parse_string(cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> Box<MacResult> {
@@ -144,7 +145,7 @@ fn parse_string(cx: &mut ExtCtxt, parser: &mut Parser) -> Option<String> {
 }
 
 
-fn expand_alt(cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> Box<MacResult> {
+fn expand_alt(cx: &mut ExtCtxt, _: codemap::Span, tts: &[ast::TokenTree]) -> Box<MacResult> {
     let mut parser = cx.new_parser_from_tts(tts);
 
     let one = parser.parse_ident();
@@ -156,6 +157,24 @@ fn expand_alt(cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> Bo
     MacItem::new(quote_item!(cx, 
         fn $alt_ident(inp: &[char]) -> Chain<StringMatch, StringMatch> {
             $one(inp).chain($two(inp))
+        }
+    ).unwrap())
+}
+
+fn expand_opt(cx: &mut ExtCtxt, _: codemap::Span, tts: &[ast::TokenTree]) -> Box<MacResult> {
+    let mut parser = cx.new_parser_from_tts(tts);
+
+    let name = parser.parse_ident();
+
+    let opt_ident_str = "opt_".to_string() + name.as_str();
+    let opt_ident = Ident::new(token::intern(opt_ident_str.as_slice()));
+
+    MacItem::new(quote_item!(cx,
+        fn $opt_ident(inp: &[char]) -> Chain<StringMatch, StringMatch> {
+            fn eps(inp: &[char]) -> StringMatch {
+                StringMatch { smatch: Some( (&[], inp) ) }
+            }
+            $name(inp).chain(eps(inp))
         }
     ).unwrap())
 }
